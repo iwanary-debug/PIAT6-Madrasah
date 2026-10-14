@@ -102,8 +102,18 @@ function clickText(text, sel = 'button') {
   return el
 }
 async function loginDemo(label) {
-  const el = $$('button.demo-item').find((b) => (b.textContent || '').includes(label))
-  if (!el) throw new Error(`akun demo "${label}" tidak ada`)
+  // Tunggu daftar akun demo benar-benar dirender. Pada hasil deploy, latensi jaringan
+  // membuat halaman masuk sesekali belum tergambar saat fungsi ini dipanggil.
+  let el = null
+  try {
+    await waitFor(() => {
+      el = $$('button.demo-item').find((b) => (b.textContent || '').includes(label))
+      return !!el
+    }, { timeout: 10000, label: `akun demo "${label}"` })
+  } catch (e) {
+    console.log('    DEBUG loginDemo: halaman =', body().replace(/\s+/g, ' ').slice(0, 200))
+    throw e
+  }
   el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
   try {
     await waitFor(() => !!$('.sidebar') && !body().includes('Akun demo'), { timeout: 12000, label: 'sidebar setelah masuk' })
