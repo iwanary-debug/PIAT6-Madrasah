@@ -1,0 +1,27 @@
+{
+  "name": "piat6-madrasah",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "worker:dev": "wrangler dev --port 8787 --local",
+    "test:api": "node scripts/api-test.mjs",
+    "preview": "vite preview",
+    "test:ui": "bash tests/run-ui.sh",
+    "test": "npm run test:api && npm run test:ui",
+    "worker:bundle": "esbuild worker/index.js --bundle --format=esm --platform=browser --target=es2022 --outfile=deploy/worker.js"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8",
+    "wrangler": "^4.0.0"
+  }
+}
