@@ -323,18 +323,29 @@ function matchRoute(method, pathname) {
   return null
 }
 
+// Pemeriksaan skema disimpan per isolate. Skrip DDL sebelumnya dieksekusi pada SETIAP permintaan API,
+// yang membuang CPU/latensi dan memperbesar pemakaian kuota D1 tanpa manfaat. Sekarang DDL dijalankan
+// sekali per isolate (cold start), sementara permintaan berikutnya memakai hasil yang sudah tersimpan di memori.
+// Bila DDL atau pembuatan data demo gagal, penanda tidak dipasang sehingga permintaan berikutnya mencoba lagi.
 let initPromise = null
+let dbInitialized = false
+
 export async function ensureInit(db, force = false) {
-  if (initPromise && !force) return initPromise
+  if (force) {
+    dbInitialized = false
+    initPromise = null
+  } else {
+    if (dbInitialized) return { initialized: true, seeded: false, fromCache: true }
+    if (initPromise) return initPromise
+  }
   const run = async () => {
     const started = Date.now()
     await db.exec(DDL)
     const seeded = await db.prepare("SELECT value FROM meta WHERE key = 'seed_version'").first()
-    if (force || !seeded || seeded.value !== SEED_VERSION) {
-      const summary = await seedAll(db)
-      return { initialized: true, seeded: true, summary, ms: Date.now() - started }
-    }
-    return { initialized: true, seeded: false, ms: Date.now() - started }
+    const needSeed = force || !seeded || seeded.value !== SEED_VERSION
+    const summary = needSeed ? await seedAll(db) : null
+    dbInitialized = true
+    return { initialized: true, seeded: needSeed, summary, ms: Date.now() - started }
   }
   initPromise = run()
   try { return await initPromise } finally { initPromise = null }
